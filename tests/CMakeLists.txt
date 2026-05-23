@@ -1,0 +1,27 @@
+file(GLOB TEST_SRCS cpp/*.cpp)
+option(CITYFLOW_ENABLE_ASAN "Build C++ tests with AddressSanitizer when supported" OFF)
+set(CITYFLOW_TEST_SANITIZER_FLAGS)
+
+if(CITYFLOW_ENABLE_ASAN)
+    if(MSVC)
+        message(WARNING "CITYFLOW_ENABLE_ASAN is not enabled for MSVC builds")
+    else()
+        list(APPEND CITYFLOW_TEST_SANITIZER_FLAGS -fsanitize=address -fno-omit-frame-pointer)
+    endif()
+endif()
+
+include_directories(${GTEST_INCLUDE_DIRS})
+foreach(SRC_PATH ${TEST_SRCS})
+    get_filename_component(SRC_NAME ${SRC_PATH} NAME)
+    string(REPLACE ".cpp" "" EXE_NAME ${SRC_NAME})
+    add_executable(${EXE_NAME} ${SRC_PATH})
+    cityflow_apply_compile_options(${EXE_NAME})
+    if(CITYFLOW_TEST_SANITIZER_FLAGS)
+        target_compile_options(${EXE_NAME} PRIVATE ${CITYFLOW_TEST_SANITIZER_FLAGS})
+        target_link_options(${EXE_NAME} PRIVATE ${CITYFLOW_TEST_SANITIZER_FLAGS})
+    endif()
+    target_link_libraries(${EXE_NAME} PUBLIC ${PROJECT_LIB_NAME} ${GTEST_BOTH_LIBRARIES})
+    add_test(NAME ${EXE_NAME}
+            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+            COMMAND ${EXE_NAME})
+endforeach()
